@@ -1,0 +1,127 @@
+---
+title: Where to live in Poland or where to move
+author: TK
+date: '2017-12-03'
+slug: where-to-live-in-poland-or-where-to-move
+categories:
+  - R
+tags:
+  - R
+  - weather
+  - analysis
+  - xkcd
+  - Poland
+---
+
+## Background
+
+Inspired by [this post by Roel M. Hogervorst](http://rmhogervorst.nl/cleancode/blog/2017/11/20/xkcd-the-netherlands-weather.html), which was inspired partly by [this post by Maëlle Salmon](http://www.masalmon.eu/2017/11/16/wheretoliveus/) inspired by [this xkcd strip](https://xkcd.com/1916/), I decided to add to this inspirationally-overloaded-cycle and by the way get around to starting my [blogdown-based](https://github.com/rstudio/blogdown) site. Let's get to it then.
+
+The original idea of Randall Munroe, the author of xkcd, was to show cities from all around the world in the plot that tells you "where to live based on your temperature preferences" - one of the axes shows temperatures in the winter and the second corresponds to **humidex** in the summer (we'll get to what it means later).
+
+![](/../../img/xkcd.png)
+
+
+This post will deal with several things: getting weather data from the web, scraping Wikipedia, choosing a city to live in Poland or elsewhere (based additionally on my personal choice of "freedom" metrics). Here I'll include only parts of the code I wrote, but all of it can be found here - 
+
+## Actual work
+
+My whole analysis, as was the case with Roel's and Maëlle's, was done in [R](https://www.r-project.org/) - the language that's currently second on my "most used" list, just after Polish and before English.
+
+Packages that I used: 
+
+ - **magrittr, tibble, dplyr, stringr, stringi, readr, purrr** - for all the data mumbo-jumbo,
+ 
+ - **rvest** - for scraping Wikipedia,
+ 
+ - **rwunderground** - for accessing [Weather Underground API](https://www.wunderground.com/),
+ 
+ - **weathermetrics** - for some weather-related metrics (will describe below),
+ 
+ - **ggplot2, ggrepel, extrafont, xkcd** - for the plots.
+
+### Where to live in Poland
+
+For starters, I needed the list of some biggest cities in Poland. Luckily, Wikipedia's got it in a pretty nice table and **rvest** lets you easily scrape them.
+
+```{r include=FALSE}
+library(rwunderground)
+library(rvest)
+library(tibble)
+library(dplyr)
+library(magrittr)
+library(stringr)
+library(readr)
+library(purrr)
+library(weathermetrics)
+library(xkcd)
+library(ggplot2)
+library(extrafont)
+library(ggrepel)
+library(stringi)
+pl_data_final <- read_delim("../../static/data/pl_final.csv", delim = ';', col_types = 'cdd')
+```
+
+```{r echo=TRUE}
+cities_wiki <-
+  read_html("https://pl.wikipedia.org/wiki/Miasta_w_Polsce_(statystyki)")
+cities_wiki %<>% html_nodes(".sortable") %>% html_table()
+
+cities_tbl <- as_tibble(cities_wiki[[1]]) %>%
+  select(city = Miasto,
+         region = `Województwo`,
+         population = `Liczba ludności (01.01.2017)`) %>%
+  mutate(population = as.integer(str_replace_all(population, "\\s", "")))
+
+top_cities_tbl <-
+  cities_tbl %>%
+  top_n(25, population) %>%
+  arrange(-population)
+
+head(top_cities_tbl, 5)
+```
+
+Aaaand, it was the end of the easy part. Then, I realized I need weather data containing at least monthly averages of temperature and humidex values. Humidex is a pretty nifty index developed in Canada and used by meteorologists to indicate how the weather really "feels", by combining temperature and humidity, which is in turn measured by the dew point temperature, which is ["the temperature at which the air can no longer "hold" all of the water vapor which is mixed with it, and some of the water vapor must condense into liquid water"](http://www.weatherquestions.com/What_is_dewpoint_temperature.htm). 
+
+As I learned, one can get that kind of data reather easily from [Weather Underground API](https://www.wunderground.com/), but only for cities that have airports. I checked the state of Polish airports - as it turns out, we have 15 of them, but unfortunately that didn't cover my needs. 
+
+I had to turn to IMGW (Instytut Meteorologii i Gospodarki Wodnej) - which in English goes by "Institute of Meteorology and Water Management" and is Polish public entity that deals with collecting weather data (amongst other things). One day, probably, their data will be available through some friendly API at https://danepubliczne.gov.pl/, but right now all we got are [CSVs locked in ZIP files](https://dane.imgw.pl/data/dane_pomiarowo_obserwacyjne/). Better than nothing, I guess. I downloaded three files containing data from around 60 weather stations from 2014, 2015 and 2016 from [here](https://dane.imgw.pl/data/dane_pomiarowo_obserwacyjne/dane_meteorologiczne/miesieczne/synop/). 
+
+Unfortunately, those files didn't contain dew point temperatures, so I had to throw away whole humidex approach. Fortunately, there's a second, similar index (this time from the USA) - heat index. [There are some differences between them](https://www.theweathernetwork.com/news/articles/humidex-vs-heat-index-whats-the-difference/10243), but for the purpose of this analysis, it didn't really matter. 
+
+After some data cleaning and learning few more things about dplyr and stringr, I got the data into some presentable and workable form.
+
+```{r echo=FALSE}
+head(pl_data_final, 5)
+```
+
+At this point I could use the code from the posts referred in the beggining to generate the xkcd-styled plot for the Polish cities.
+
+```{r fig.height=6, fig.width=8, message=FALSE, warning=FALSE}
+xrange <- range(pl_data_final$avg_heat_index)
+yrange <- range(pl_data_final$avg_temp)
+
+set.seed(42)
+
+ggplot(pl_data_final,
+       aes(avg_heat_index, avg_temp)) +
+  geom_point() +
+  geom_text_repel(aes(label = city),
+                  family = "xkcd", 
+                  max.iter = 50000) +
+  ggtitle("Where to live in Poland based on your temperature preferences",
+          subtitle = "Data from IMGW, 2014-2016") +
+  xlab("Heat index")+
+  ylab("Winter temperature in Celsius degrees") +
+  xkcdaxis(xrange = xrange,
+           yrange = yrange)+
+  theme_xkcd() +
+  theme(text = element_text(size = 16, family = "xkcd"))
+```
+
+As expected, the differences between Polish cities aren't that big, but if you want to be as warm as one can in this country, you should think about Wrocław!
+
+### Where to move
+
+It's hard not to notice that sociopolitical climate in Poland is not so warm either. This leads me more and more oftenly to think about giving a try to move and experience a different place. 
+

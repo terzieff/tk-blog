@@ -1,0 +1,106 @@
+---
+title: Where to live in Poland or where to move
+author: TK
+date: '2017-12-03'
+slug: where-to-live-in-poland-or-where-to-move
+categories:
+  - R
+tags:
+  - R
+  - weather
+  - analysis
+  - xkcd
+  - Poland
+---
+
+
+
+<div id="background" class="section level2">
+<h2>Background</h2>
+<p>Inspired by <a href="http://rmhogervorst.nl/cleancode/blog/2017/11/20/xkcd-the-netherlands-weather.html">this post by Roel M. Hogervorst</a>, which was inspired partly by <a href="http://www.masalmon.eu/2017/11/16/wheretoliveus/">this post by Maëlle Salmon</a> inspired by <a href="https://xkcd.com/1916/">this xkcd strip</a>, I decided to add to this inspirationally-overloaded-cycle and by the way get around to starting my <a href="https://github.com/rstudio/blogdown">blogdown-based</a> site. Let’s get to it then.</p>
+<p>The original idea of Randall Munroe, the author of xkcd, was to show cities from all around the world in the plot that tells you “where to live based on your temperature preferences” - one of the axes shows temperatures in the winter and the second corresponds to <strong>humidex</strong> in the summer (we’ll get to what it means later).</p>
+<div class="figure">
+<img src="/../../img/xkcd.png" />
+
+</div>
+<p>This post will deal with several things: getting weather data from the web, scraping Wikipedia, choosing a city to live in Poland or elsewhere (based additionally on my personal choice of “freedom” metrics). Here I’ll include only parts of the code I wrote, but all of it can be found here -</p>
+</div>
+<div id="actual-work" class="section level2">
+<h2>Actual work</h2>
+<p>My whole analysis, as was the case with Roel’s and Maëlle’s, was done in <a href="https://www.r-project.org/">R</a> - the language that’s currently second on my “most used” list, just after Polish and before English.</p>
+<p>Packages that I used:</p>
+<ul>
+<li><p><strong>magrittr, tibble, dplyr, stringr, stringi, readr, purrr</strong> - for all the data mumbo-jumbo,</p></li>
+<li><p><strong>rvest</strong> - for scraping Wikipedia,</p></li>
+<li><p><strong>rwunderground</strong> - for accessing <a href="https://www.wunderground.com/">Weather Underground API</a>,</p></li>
+<li><p><strong>weathermetrics</strong> - for some weather-related metrics (will describe below),</p></li>
+<li><p><strong>ggplot2, ggrepel, extrafont, xkcd</strong> - for the plots.</p></li>
+</ul>
+<div id="where-to-live-in-poland" class="section level3">
+<h3>Where to live in Poland</h3>
+<p>For starters, I needed the list of some biggest cities in Poland. Luckily, Wikipedia’s got it in a pretty nice table and <strong>rvest</strong> lets you easily scrape them.</p>
+<pre class="r"><code>cities_wiki &lt;-
+  read_html(&quot;https://pl.wikipedia.org/wiki/Miasta_w_Polsce_(statystyki)&quot;)
+cities_wiki %&lt;&gt;% html_nodes(&quot;.sortable&quot;) %&gt;% html_table()
+
+cities_tbl &lt;- as_tibble(cities_wiki[[1]]) %&gt;%
+  select(city = Miasto,
+         region = `Województwo`,
+         population = `Liczba ludności (01.01.2017)`) %&gt;%
+  mutate(population = as.integer(str_replace_all(population, &quot;\\s&quot;, &quot;&quot;)))
+
+top_cities_tbl &lt;-
+  cities_tbl %&gt;%
+  top_n(25, population) %&gt;%
+  arrange(-population)
+
+head(top_cities_tbl, 5)</code></pre>
+<pre><code>## # A tibble: 5 x 3
+##       city        region population
+##      &lt;chr&gt;         &lt;chr&gt;      &lt;int&gt;
+## 1 Warszawa   mazowieckie    1753977
+## 2   Kraków   małopolskie     765320
+## 3     Łódź       łódzkie     696503
+## 4  Wrocław  dolnośląskie     637683
+## 5   Poznań wielkopolskie     540372</code></pre>
+<p>Aaaand, it was the end of the easy part. Then, I realized I need weather data containing at least monthly averages of temperature and humidex values. Humidex is a pretty nifty index developed in Canada and used by meteorologists to indicate how the weather really “feels”, by combining temperature and humidity, which is in turn measured by the dew point temperature, which is <a href="http://www.weatherquestions.com/What_is_dewpoint_temperature.htm">“the temperature at which the air can no longer”hold&quot; all of the water vapor which is mixed with it, and some of the water vapor must condense into liquid water“</a>.</p>
+<p>As I learned, one can get that kind of data reather easily from <a href="https://www.wunderground.com/">Weather Underground API</a>, but only for cities that have airports. I checked the state of Polish airports - as it turns out, we have 15 of them, but unfortunately that didn’t cover my needs.</p>
+<p>I had to turn to IMGW (Instytut Meteorologii i Gospodarki Wodnej) - which in English goes by “Institute of Meteorology and Water Management” and is Polish public entity that deals with collecting weather data (amongst other things). One day, probably, their data will be available through some friendly API at <a href="https://danepubliczne.gov.pl/" class="uri">https://danepubliczne.gov.pl/</a>, but right now all we got are <a href="https://dane.imgw.pl/data/dane_pomiarowo_obserwacyjne/">CSVs locked in ZIP files</a>. Better than nothing, I guess. I downloaded three files containing data from around 60 weather stations from 2014, 2015 and 2016 from <a href="https://dane.imgw.pl/data/dane_pomiarowo_obserwacyjne/dane_meteorologiczne/miesieczne/synop/">here</a>.</p>
+<p>Unfortunately, those files didn’t contain dew point temperatures, so I had to throw away whole humidex approach. Fortunately, there’s a second, similar index (this time from the USA) - heat index. <a href="https://www.theweathernetwork.com/news/articles/humidex-vs-heat-index-whats-the-difference/10243">There are some differences between them</a>, but for the purpose of this analysis, it didn’t really matter.</p>
+<p>After some data cleaning and learning few more things about dplyr and stringr, I got the data into some presentable and workable form.</p>
+<pre><code>## # A tibble: 5 x 3
+##            city   avg_temp avg_heat_index
+##           &lt;chr&gt;      &lt;dbl&gt;          &lt;dbl&gt;
+## 1     Bialystok -0.6111111       17.25556
+## 2 Bielsko-Biala  1.9555556       17.91250
+## 3   Czestochowa  1.2222222       18.78571
+## 4        Gdansk  1.2444444       17.52222
+## 5      Katowice  1.4666667       17.96250</code></pre>
+<p>At this point I could use the code from the posts referred in the beggining to generate the xkcd-styled plot for the Polish cities.</p>
+<pre class="r"><code>xrange &lt;- range(pl_data_final$avg_heat_index)
+yrange &lt;- range(pl_data_final$avg_temp)
+
+set.seed(42)
+
+ggplot(pl_data_final,
+       aes(avg_heat_index, avg_temp)) +
+  geom_point() +
+  geom_text_repel(aes(label = city),
+                  family = &quot;xkcd&quot;, 
+                  max.iter = 50000) +
+  ggtitle(&quot;Where to live in Poland based on your temperature preferences&quot;,
+          subtitle = &quot;Data from IMGW, 2014-2016&quot;) +
+  xlab(&quot;Heat index&quot;)+
+  ylab(&quot;Winter temperature in Celsius degrees&quot;) +
+  xkcdaxis(xrange = xrange,
+           yrange = yrange)+
+  theme_xkcd() +
+  theme(text = element_text(size = 16, family = &quot;xkcd&quot;))</code></pre>
+<p><img src="/blog/2017-12-03-where-to-live-in-poland-or-where-to-move_files/figure-html/unnamed-chunk-4-1.png" width="768" /></p>
+<p>As expected, the differences between Polish cities aren’t that big, but if you want to be as warm as one can in this country, you should think about Wrocław!</p>
+</div>
+<div id="where-to-move" class="section level3">
+<h3>Where to move</h3>
+<p>It’s hard not to notice that sociopolitical climate in Poland is not so warm either. This leads me more and more oftenly to think about giving a try to move and experience a different place.</p>
+</div>
+</div>
