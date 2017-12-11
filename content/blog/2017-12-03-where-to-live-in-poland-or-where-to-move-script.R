@@ -153,8 +153,6 @@ freedom_tbl <- full_join(moral_tbl, press_tbl, by = "country") %>%
   filter(index.x > 60 & index.y < 25)
 
 ###FUNCS
-
-
 get_avg_temp <- function(lat_long, start_date = "1201", end_date = "0228") {
   
   tryCatch(
@@ -202,8 +200,8 @@ get_humidex <- function(temp, dewpoint) {
 #######################
 # CITIES 
 #######################
-# Tried wiki, but it's simpler that way:
 
+# Tried wiki, but it's simpler that way:
 worldcities_df <- read_csv("weather/data/simplemaps-worldcities-basic.csv", 
                                          col_types = cols(iso2 = col_skip(), iso3 = col_skip(), 
                                                           province = col_skip()))
@@ -239,21 +237,10 @@ world_cities_tbl
 
 write_delim(world_cities_tbl, "results.csv", delim = ";")
   
-
-
-###########################
-###### Unnecessary in the end
-# library(ggmap)
-# ## Had to get API key - write how
-# register_google(key = "AIzaSyC6oRKGaqDaGfEkECVEixJ3A6I0gq4FNrU")
-# 
-# cities %<>% mutate_geocode(value)
-
-world_cities_tbl <- read_delim("content/post/results.csv", 
-                      ";", escape_double = FALSE, trim_ws = TRUE)
+# world_cities_tbl <- read_delim("content/post/results.csv", 
+#                       ";", escape_double = FALSE, trim_ws = TRUE)
 
 ### FINAL WORLD PLOT
-
 world_cities_tbl %<>% 
   filter(!is.na(humidex)) %>% 
   mutate(city = stri_trans_general(city, "latin-ascii"))
