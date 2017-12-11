@@ -17,13 +17,13 @@ tags:
 
 <div id="background" class="section level2">
 <h2>Background</h2>
-<p>Inspired by <a href="http://rmhogervorst.nl/cleancode/blog/2017/11/20/xkcd-the-netherlands-weather.html">this post by Roel M. Hogervorst</a>, which was inspired partly by <a href="http://www.masalmon.eu/2017/11/16/wheretoliveus/">this post by Maëlle Salmon</a> inspired by <a href="https://xkcd.com/1916/">this xkcd strip</a>, I decided to add to this inspirationally-overloaded-cycle and by the way get around to starting my <a href="https://github.com/rstudio/blogdown">blogdown-based</a> site. Let’s get to it then.</p>
+<p>Inspired by <a href="http://rmhogervorst.nl/cleancode/blog/2017/11/20/xkcd-the-netherlands-weather.html">this post by Roel M. Hogervorst</a>, which was inspired partly by <a href="http://www.masalmon.eu/2017/11/16/wheretoliveus/">this post by Maëlle Salmon</a> inspired by <a href="https://xkcd.com/1916/">this xkcd strip</a>, I decided to add to this inspirationally-overloaded-cycle and by the way get around to starting my <a href="https://github.com/rstudio/blogdown">blogdown</a>-based site. Let’s get to it then.</p>
 <p>The original idea of Randall Munroe, the author of xkcd, was to show cities from all around the world in the plot that tells you “where to live based on your temperature preferences” - one of the axes shows temperatures in the winter and the second corresponds to <strong>humidex</strong> in the summer (we’ll get to what it means later).</p>
 <div class="figure">
 <img src="/../../img/xkcd.png" />
 
 </div>
-<p>This post will deal with several things: getting weather data from the web, scraping Wikipedia, choosing a city to live in Poland or elsewhere (based additionally on my personal choice of “freedom” metrics). Here I’ll include only parts of the code I wrote, but all of it can be found here -</p>
+<p><br> This post will deal with several things: getting weather data from the web, scraping Wikipedia, choosing a city to live in Poland or elsewhere (based additionally on my personal choice of “freedom” metrics). Here I’ll include only parts of the code I wrote, but all of it can be found <a href="https://github.com/terzieff/tk-blog/blob/master/content/blog/2017-12-03-where-to-live-in-poland-or-where-to-move-script.R">here</a>.</p>
 </div>
 <div id="actual-work" class="section level2">
 <h2>Actual work</h2>
@@ -66,7 +66,7 @@ head(top_cities_tbl, 5)</code></pre>
 <p>Aaaand, it was the end of the easy part. Then, I realized I need weather data containing at least monthly averages of temperature and humidex values. Humidex is a pretty nifty index developed in Canada and used by meteorologists to indicate how the weather really “feels”, by combining temperature and humidity, which is in turn measured by the dew point temperature, which is <a href="http://www.weatherquestions.com/What_is_dewpoint_temperature.htm">“the temperature at which the air can no longer”hold&quot; all of the water vapor which is mixed with it, and some of the water vapor must condense into liquid water“</a>.</p>
 <p>As I learned, one can get that kind of data reather easily from <a href="https://www.wunderground.com/">Weather Underground API</a>, but only for cities that have airports. I checked the state of Polish airports - as it turns out, we have 15 of them, but unfortunately that didn’t cover my needs.</p>
 <p>I had to turn to IMGW (Instytut Meteorologii i Gospodarki Wodnej) - which in English goes by “Institute of Meteorology and Water Management” and is Polish public entity that deals with collecting weather data (amongst other things). One day, probably, their data will be available through some friendly API at <a href="https://danepubliczne.gov.pl/" class="uri">https://danepubliczne.gov.pl/</a>, but right now all we got are <a href="https://dane.imgw.pl/data/dane_pomiarowo_obserwacyjne/">CSVs locked in ZIP files</a>. Better than nothing, I guess. I downloaded three files containing data from around 60 weather stations from 2014, 2015 and 2016 from <a href="https://dane.imgw.pl/data/dane_pomiarowo_obserwacyjne/dane_meteorologiczne/miesieczne/synop/">here</a>.</p>
-<p>Unfortunately, those files didn’t contain dew point temperatures, so I had to throw away whole humidex approach. Fortunately, there’s a second, similar index (this time from the USA) - heat index. <a href="https://www.theweathernetwork.com/news/articles/humidex-vs-heat-index-whats-the-difference/10243">There are some differences between them</a>, but for the purpose of this analysis, it didn’t really matter.</p>
+<p>Unfortunately, those files didn’t contain dew point temperatures, so I had to throw away whole humidex approach. Luckily, there’s a second, similar index (this time from the USA) - heat index. <a href="https://www.theweathernetwork.com/news/articles/humidex-vs-heat-index-whats-the-difference/10243">There are some differences between them</a>, but for the purpose of this analysis, it didn’t really matter.</p>
 <p>After some data cleaning and learning few more things about dplyr and stringr, I got the data into some presentable and workable form.</p>
 <pre><code>## # A tibble: 5 x 3
 ##            city   avg_temp avg_heat_index
@@ -101,6 +101,104 @@ ggplot(pl_data_final,
 </div>
 <div id="where-to-move" class="section level3">
 <h3>Where to move</h3>
-<p>It’s hard not to notice that sociopolitical climate in Poland is not so warm either. This leads me more and more oftenly to think about giving a try to move and experience a different place.</p>
+<p>It’s currently not hard to notice that sociopolitical climate in Poland is not so warm either. This leads me to think more and more often about giving a try to move and experience a different place. In order to make this analysis somewhat more interesting and useful, I decided to include cities from other countries in it.</p>
+<p>To paraphrase <a href="https://www.youtube.com/watch?v=B0AX81gv5aM">Mindless Self Indulgence’s biggest hit</a> - <em>I like my countries free, just like my jazz</em> and when thinking about relocation can’t but include this sentiment in my considerations. Fortunately, some people and organizations share my feelings or at least want to know how this whole notion of “freedom” looks around the world. I went through most of the <a href="https://en.wikipedia.org/wiki/List_of_freedom_indices">list of freedom indices</a> from Wikipedia and decided to take a closer look at two of them, namely <a href="https://en.wikipedia.org/wiki/Press_Freedom_Index">Press Freedom Index</a> by <a href="https://rsf.org/en">Reporters Without Borders</a> and <a href="https://en.wikipedia.org/wiki/World_Index_of_Moral_Freedom">World Index of Moral Freedom</a> by <a href="http://www.fundalib.org/en/">Foundation for the Advancement of Liberty</a>. You can read about specifics of their methodologies on their respective pages, but I’ll try to summarize the most important parts below.</p>
+<p><strong>Press Freedom Index</strong> aims to <em>“reflect the degree of freedom that journalists, news organisations, and netizens have in each country”</em> on a scale from 0 to 100, where the fewer points the better. Countries scoring 0 to 25 get “good” or “fairly good” mark, whereas 25-35 means the situation is “problematic”, 35-55 “bad” and 55-100 “very bad”. Poland got <strong>26.47</strong> points this year.</p>
+<pre class="r"><code>press_index_countries &lt;- 
+  read_html(&quot;https://en.wikipedia.org/wiki/Press_Freedom_Index&quot;) %&gt;% 
+  html_nodes(&quot;.sortable&quot;) %&gt;% 
+  html_table()
+
+press_tbl &lt;- as_tibble(press_index_countries[[1]]) %&gt;% 
+  select(1:2) %&gt;%
+  mutate(index = str_sub(`2017[4]`, 6)) %&gt;%
+  select(country = Country, index) %&gt;%
+  mutate(country = str_replace(country, &quot;\\[.{1}\\]&quot;, &quot;&quot;),
+         index = as.double(str_replace(index, &quot;\\s&quot;, &quot;&quot;)))
+
+head(press_tbl, 5)</code></pre>
+<pre><code>## # A tibble: 5 x 2
+##       country index
+##         &lt;chr&gt; &lt;dbl&gt;
+## 1      Norway  7.60
+## 2      Sweden  8.27
+## 3     Finland  8.92
+## 4     Denmark 10.36
+## 5 Netherlands 11.28</code></pre>
+<p><strong>World Index of Moral Freedom</strong> tries to answer the question: <em>“how free from state-imposed moral constraints are human beings depending on their countries of residence”</em>. It ranks countries in 5 categories: religious freedom, bioethical freedom, drugs freedom, sexual freedom and gender &amp; family freedom. The scale is also 0-100, but other way round - 90+ points represents “highest moral freedom” and every country below 50 is deemed as having insufficient or low moral freedom. Poland scored <strong>50,08</strong> in the last ranking (2016).</p>
+<pre class="r"><code>moral_index_countries &lt;- 
+  read_html(&quot;https://en.wikipedia.org/wiki/World_Index_of_Moral_Freedom&quot;) %&gt;% 
+  html_nodes(&quot;.sortable&quot;) %&gt;% 
+  html_table()
+
+moral_tbl &lt;- as_tibble(moral_index_countries[[1]]) %&gt;% 
+  select(country = COUNTRY, index = `WIMF 2016`) %&gt;%
+  mutate(index = as.double(str_replace(index, &quot;,&quot;, &quot;.&quot;)))
+
+head(moral_tbl, 5)</code></pre>
+<pre><code>## # A tibble: 5 x 2
+##          country index
+##            &lt;chr&gt; &lt;dbl&gt;
+## 1    Netherlands 91.70
+## 2        Uruguay 88.75
+## 3       Portugal 83.80
+## 4 Czech Republic 80.50
+## 5        Belgium 79.35</code></pre>
+<p>So, I looked at the tables and decided to put the threshold at &lt;25 for press freedom and &gt;60 for the moral one. I hesitated a moment when looking at Italy (26.26 in the first ranking) and had to convince myself that I can actually grow my grapevines in a few other places, but eventually said <em>arrivederci</em> and moved on. That’s what I was left with:</p>
+<pre><code>## # A tibble: 22 x 3
+##           country index.x index.y
+##             &lt;chr&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+##  1    Netherlands   91.70   11.28
+##  2        Uruguay   88.75   17.43
+##  3       Portugal   83.80   15.77
+##  4 Czech Republic   80.50   16.91
+##  5        Belgium   79.35   12.75
+##  6          Spain   78.60   18.69
+##  7  United States   78.20   23.88
+##  8        Germany   78.03   14.97
+##  9         Canada   76.58   16.53
+## 10     Luxembourg   72.60   14.72
+## 11    Switzerland   72.38   12.13
+## 12        Austria   71.13   13.47
+## 13       Slovenia   70.00   21.70
+## 14         France   69.93   22.24
+## 15        Estonia   69.40   13.55
+## 16         Sweden   66.95    8.27
+## 17        Denmark   66.33   10.36
+## 18    New Zealand   65.25   13.98
+## 19       Slovakia   62.33   15.51
+## 20   South Africa   61.70   20.12
+## 21      Australia   61.35   16.02
+## 22        Finland   60.58    8.92</code></pre>
+<p>At this point, I didn’t want to complicate my life and this post any further. I found really cool world’s cities database at <a href="https://simplemaps.com/data/world-cities">simplemaps.com</a>, chose two biggest places (in terms of population) from each of the 22 countries and could finally use Weather Underground API. In order to do that, you have to sign in <a href="https://www.wunderground.com/weather/api/">at their website</a> and get an API key. The process is pretty straight-forward, so I won’t go into details here. When you get your key, you can use it straight from R thanks to the <strong>wunderground</strong> package, like that:</p>
+<pre class="r"><code>library(rwunderground)
+rwunderground::set_api_key(&quot;450a973f0b99e2f0&quot;)
+
+planner(set_location(territory = &quot;Poland&quot;, city = &quot;Warsaw&quot;),
+        start_date = &quot;0101&quot;,
+        end_date = &quot;0131&quot;)</code></pre>
+<p>The <a href="https://www.wunderground.com/travelplanner/index.asp">“Travel Planner”</a> gives us 30+ variables for the requested city and time period, average temperatures and dew points being among them. It is a little bit enigmatic, as it doesn’t say anywhere in the documentation how many years of data it considers, but well, it’ll do.</p>
+<p>The biggest downside of the free plan of their API is that it lets you make max. 10 calls per minute, so I had to put some “sleep time” into my functions and wait around 20 minutes to get all the data I needed.</p>
+<p>Finally, however, I could plot my final output, and now we can all choose some warm (or cold, if you prefer), big city located in one of the least authoritative countries in the world. Enjoy.</p>
+<pre class="r"><code>xrange &lt;- range(world_cities_tbl$humidex)
+yrange &lt;- range(world_cities_tbl$wint_avg_temp)
+
+set.seed(42)
+
+ggplot(world_cities_tbl,
+       aes(humidex, wint_avg_temp)) +
+  geom_point() +
+  geom_text_repel(aes(label = city),
+                  family = &quot;xkcd&quot;, 
+                  max.iter = 50000) +
+  ggtitle(&quot;Where to live based on your temperature preferences&quot;,
+          subtitle = &quot;Data from Weather Underground&quot;) +
+  xlab(&quot;Summer humidex&quot;) +
+  ylab(&quot;Winter temperature in Celsius degrees&quot;) +
+  xkcdaxis(xrange = xrange,
+           yrange = yrange)+
+  theme_xkcd() +
+  theme(text = element_text(size = 16, family = &quot;xkcd&quot;))</code></pre>
+<p><img src="/blog/2017-12-03-where-to-live-in-poland-or-where-to-move_files/figure-html/unnamed-chunk-9-1.png" width="768" /></p>
 </div>
 </div>
