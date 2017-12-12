@@ -65,10 +65,6 @@ world_cities_tbl <- read_delim("../../static/data/world_final.csv",
                             delim = ';', 
                             escape_double = FALSE, 
                             trim_ws = TRUE)
-
-world_cities_tbl %<>% 
-  filter(!is.na(humidex)) %>% 
-  mutate(city = stri_trans_general(city, "latin-ascii"))
 ```
 
 ```{r echo=TRUE}
@@ -190,11 +186,37 @@ planner(set_location(territory = "Poland", city = "Warsaw"),
         end_date = "0131")
 ```
 
-The ["Travel Planner"](https://www.wunderground.com/travelplanner/index.asp) gives us 30+ variables for the requested city and time period, average temperatures and dew points being among them. It is a little bit enigmatic, as it doesn't say anywhere in the documentation how many years of data it considers, but well, it'll do.
+The ["Travel Planner"](https://www.wunderground.com/travelplanner/index.asp) gives us 30+ variables for the requested city and time period, average temperatures and dew points being among them. It is a little bit enigmatic, as it doesn't say anywhere in the documentation how many years of data it considers, but well, that'll do.
 
-The biggest downside of the free plan of their API is that it lets you make max. 10 calls per minute, so I had to put some "sleep time" into my functions and wait around 20 minutes to get all the data I needed.
+The biggest downside of the free plan of their API is that it lets you make max. 10 calls per minute, so I had to put some "sleep time" (with ```Sys.sleep()```) into my functions and wait around 20 minutes to get all the data I needed.
 
-Finally, however, I could plot my final output, and now we can all choose some warm (or cold, if you prefer), big city located in one of the least authoritative countries in the world. Enjoy.
+Finally, however, I could plot my final output, and now we can all choose some warm (or cold, if you prefer), big city located in one of the least authoritative countries in the world.
+
+Final notes regarding the plot: 'index' value come from reversing the press freedom index and adding it to the moral one. I also left the Polish cities (Łódź and Warsaw) for reference. And I lost the axes somewhere along the way - they didn't want to work with coloured points (I'll work on my ggplot skills and fix that one day, I promise). 
+
+Enjoy.
+
+```{r include=FALSE}
+worldcities_df <- read_csv("../../static/data/simplemaps-worldcities-basic.csv")
+worldcities_df %<>% select(city, country)
+world_cities_tbl <- left_join(world_cities_tbl, worldcities_df, by = "city") %>% 
+  slice(-c(2, 4, 40, 46))
+
+freedom_tbl <- freedom_tbl %>% mutate(index.y = 100 - index.y,
+                                       `freedom index` = index.x + index.y) %>%
+  select(country, `freedom index`)
+
+world_cities_tbl %<>% mutate(country = if_else(country == "United States of America", 
+                                                "United States", 
+                                                country))
+
+world_cities_tbl <- left_join(world_cities_tbl, freedom_tbl, by = "country")
+
+world_cities_tbl %<>% 
+  filter(!is.na(humidex)) %>% 
+  mutate(city = stri_trans_general(city, "latin-ascii"))
+```
+
 
 ```{r fig.height=6, fig.width=8, message=FALSE, warning=FALSE}
 xrange <- range(world_cities_tbl$humidex)
@@ -203,18 +225,17 @@ yrange <- range(world_cities_tbl$wint_avg_temp)
 set.seed(42)
 
 ggplot(world_cities_tbl,
-       aes(humidex, wint_avg_temp)) +
+       aes(humidex, wint_avg_temp, color = `freedom index`)) +
   geom_point() +
   geom_text_repel(aes(label = city),
                   family = "xkcd", 
                   max.iter = 50000) +
   ggtitle("Where to live based on your temperature preferences",
-          subtitle = "Data from Weather Underground") +
+          subtitle = "Data from Weather Underground, simplemaps and Wikipedia") +
   xlab("Summer humidex") +
   ylab("Winter temperature in Celsius degrees") +
-  xkcdaxis(xrange = xrange,
-           yrange = yrange)+
   theme_xkcd() +
-  theme(text = element_text(size = 16, family = "xkcd"))
+  theme(text = element_text(size = 16, family = "xkcd"),
+        legend.position = c(0.85, 0.2))
 
 ```

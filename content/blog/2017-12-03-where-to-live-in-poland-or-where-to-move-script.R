@@ -202,7 +202,7 @@ get_humidex <- function(temp, dewpoint) {
 #######################
 
 # Tried wiki, but it's simpler that way:
-worldcities_df <- read_csv("weather/data/simplemaps-worldcities-basic.csv", 
+worldcities_df <- read_csv("static/data/simplemaps-worldcities-basic.csv", 
                                          col_types = cols(iso2 = col_skip(), iso3 = col_skip(), 
                                                           province = col_skip()))
 
@@ -232,26 +232,44 @@ world_cities_tbl %<>%
                                    get_avg_dewpt(lat_long, "0601", "0831")))) %>%
   mutate(humidex = get_humidex(summer_avg_temp, summer_avg_dewpt))
 
+# write_delim(world_cities_tbl, "results.csv", delim = ";")
 
-world_cities_tbl
-
-write_delim(world_cities_tbl, "results.csv", delim = ";")
-  
-# world_cities_tbl <- read_delim("content/post/results.csv", 
+################################
+# (At this point I decided to add colors to the plot)
+# This should be done earlier, but now I don't want to download weather data once more
+# so it's done fast & dirty, sorry
+################################
+# world_cities_tbl <- read_delim("static/data/world_final.csv",
 #                       ";", escape_double = FALSE, trim_ws = TRUE)
+worldcities_df <- read_csv("../../static/data/simplemaps-worldcities-basic.csv")
+worldcities_df %<>% select(city, country)
+world_cities_tbl <- left_join(world_cities_tbl, worldcities_df, by = "city") %>% 
+  slice(-c(2, 4, 40, 46))
 
-### FINAL WORLD PLOT
+freedom_tbl <- freedom_tbl %>% mutate(index.y = 100 - index.y,
+                                      index = index.x + index.y) %>%
+  select(country, index)
+
+world_cities_tbl %<>% mutate(country = if_else(country == "United States of America", 
+                                               "United States", 
+                                               country))
+
+world_cities_tbl <- left_join(world_cities_tbl, freedom_tbl, by = "country")
+
 world_cities_tbl %<>% 
   filter(!is.na(humidex)) %>% 
   mutate(city = stri_trans_general(city, "latin-ascii"))
 
+################################
+# FINAL WORLD PLOT
+################################
 xrange <- range(world_cities_tbl$humidex)
 yrange <- range(world_cities_tbl$wint_avg_temp)
 
 set.seed(42)
 
 ggplot(world_cities_tbl,
-       aes(humidex, wint_avg_temp)) +
+       aes(humidex, wint_avg_temp, color = index)) +
   geom_point() +
   geom_text_repel(aes(label = city),
                   family = "xkcd", 
@@ -260,7 +278,5 @@ ggplot(world_cities_tbl,
           subtitle = "Data from Weather Underground") +
   xlab("Summer humidex") +
   ylab("Winter temperature in Celsius degrees") +
-  xkcdaxis(xrange = xrange,
-           yrange = yrange)+
   theme_xkcd() +
   theme(text = element_text(size = 16, family = "xkcd"))
