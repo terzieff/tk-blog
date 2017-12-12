@@ -173,7 +173,7 @@ head(moral_tbl, 5)</code></pre>
 ## 22        Finland   60.58    8.92</code></pre>
 <p>At this point, I didn’t want to complicate my life and this post any further. I found really cool world’s cities database at <a href="https://simplemaps.com/data/world-cities">simplemaps.com</a>, chose two biggest places (in terms of population) from each of the 22 countries and could finally use Weather Underground API. In order to do that, you have to sign in <a href="https://www.wunderground.com/weather/api/">at their website</a> and get an API key. The process is pretty straight-forward, so I won’t go into details here. When you get your key, you can use it straight from R thanks to the <strong>wunderground</strong> package, like that:</p>
 <pre class="r"><code>library(rwunderground)
-rwunderground::set_api_key(&quot;450a973f0b99e2f0&quot;)
+rwunderground::set_api_key(&quot;YOUR_KEY_HERE&quot;)
 
 planner(set_location(territory = &quot;Poland&quot;, city = &quot;Warsaw&quot;),
         start_date = &quot;0101&quot;,
