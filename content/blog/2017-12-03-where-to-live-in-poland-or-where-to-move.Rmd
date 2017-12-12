@@ -180,7 +180,7 @@ At this point, I didn't want to complicate my life and this post any further. I 
 
 ```{r eval=FALSE, include=TRUE}
 library(rwunderground)
-rwunderground::set_api_key("450a973f0b99e2f0")
+rwunderground::set_api_key("YOUR_KEY_HERE")
 
 planner(set_location(territory = "Poland", city = "Warsaw"),
         start_date = "0101",
